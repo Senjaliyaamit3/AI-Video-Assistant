@@ -55,22 +55,9 @@ COOKIE_FILE = os.path.join(
 # FFmpeg Configuration
 # ============================================================
 
-FFMPEG_DIR = (
-    r"C:\Users\DELL\AppData\Local\Microsoft\WinGet\Packages"
-    r"\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe"
-    r"\ffmpeg-9.0-full_build\bin"
-)
-
-FFMPEG_PATH = os.path.join(
-    FFMPEG_DIR,
-    "ffmpeg.exe"
-)
-
-FFPROBE_PATH = os.path.join(
-    FFMPEG_DIR,
-    "ffprobe.exe"
-)
-
+FFMPEG_PATH = "ffmpeg"
+FFPROBE_PATH = "ffprobe"
+FFMPEG_DIR = None
 
 # ============================================================
 # Verify FFmpeg
