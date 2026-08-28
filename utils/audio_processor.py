@@ -250,6 +250,10 @@ def verify_cookie_file():
 # YouTube → WAV
 # ============================================================
 
+# ============================================================
+# YouTube → WAV
+# ============================================================
+
 def download_youtube_audio(
     url: str
 ) -> str:
@@ -335,12 +339,12 @@ def download_youtube_audio(
 
 
         # ====================================================
-        # Anti-Bot & Client Configuration (Fixes 403 Forbidden)
+        # Anti-Bot & Client Configuration (Bypasses SABR/403)
         # ====================================================
 
         "extractor_args": {
             "youtube": {
-                "player_client": ["android", "web"]
+                "player_client": ["tv", "ios", "web"]
             }
         },
 
@@ -527,7 +531,6 @@ def download_youtube_audio(
             "yt-dlp could not access this video.\n\n"
             f"Original error:\n{error}"
         ) from error
-
 
 # ============================================================
 # Convert Audio → WAV
