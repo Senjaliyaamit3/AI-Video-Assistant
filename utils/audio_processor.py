@@ -312,52 +312,86 @@ def download_youtube_audio(
     # --------------------------------------------------------
 
     ydl_opts = {
-    "format": "bestaudio/best",
 
-    "outtmpl": output_path,
+        # ====================================================
+        # Best available audio
+        # ====================================================
 
-    "extractor_args": {
-        "youtube": {
-            "player_client": [
-                "default",
-                "web_embedded"
-            ]
-        }
-    },
+        "format": "bestaudio/best",
 
-    "remote_components": {
-        "ejs": [
-            "github"
-        ]
-    },
 
-    "js_runtimes": {
-        "deno": {}
-    },
+        # ====================================================
+        # Output
+        # ====================================================
 
-    "noplaylist": True,
+        "outtmpl": output_path,
 
-    "postprocessors": [
-        {
-            "key": "FFmpegExtractAudio",
-            "preferredcodec": "wav"
-        }
-    ],
 
-    "ffmpeg_location": FFMPEG_PATH,
+        # ====================================================
+        # Download only one video
+        # ====================================================
 
-    "socket_timeout": 30,
+        "noplaylist": True,
 
-    "retries": 3,
 
-    "fragment_retries": 3,
+        # ====================================================
+        # Anti-Bot & Client Configuration (Fixes 403 Forbidden)
+        # ====================================================
 
-    "force_ipv4": True,
+        "extractor_args": {
+            "youtube": {
+                "player_client": ["android", "web"]
+            }
+        },
 
-    "quiet": False,
+        "http_headers": {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-us,en;q=0.5",
+            "Sec-Fetch-Mode": "navigate",
+        },
+
+
+        # ====================================================
+        # Audio → WAV
+        # ====================================================
+
+        "postprocessors": [
+
+            {
+
+                "key": "FFmpegExtractAudio",
+
+                "preferredcodec": "wav",
+
+            }
+
+        ],
+
+
+        # ====================================================
+        # Download settings
+        # ====================================================
+
+        "quiet": False,
 
         "no_warnings": False,
+
+        "retries": 3,
+
+        "fragment_retries": 3,
+
+        "ignoreerrors": False,
+
+
+        # ====================================================
+        # Network timeout
+        # ====================================================
+
+        "socket_timeout": 30,
+
     }
+
 
     # --------------------------------------------------------
     # Add cookies only if available
