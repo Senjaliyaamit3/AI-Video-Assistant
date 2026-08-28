@@ -1,6 +1,5 @@
 import os
 import shutil
-import tempfile
 
 import yt_dlp
 from pydub import AudioSegment
@@ -33,77 +32,46 @@ os.makedirs(
 
 
 # ============================================================
-# FFmpeg
+# YouTube Cookie Configuration
 # ============================================================
 
-FFMPEG_PATH = shutil.which("ffmpeg")
-FFPROBE_PATH = shutil.which("ffprobe")
+COOKIE_FILE = os.path.join(
+    PROJECT_DIR,
+    "youtube_cookies.txt"
+)
 
 
-if FFMPEG_PATH is None:
-    raise FileNotFoundError(
-        "FFmpeg not found. "
-        "Make sure ffmpeg is present in packages.txt."
-    )
-
-
-if FFPROBE_PATH is None:
-    raise FileNotFoundError(
-        "FFprobe not found. "
-        "Make sure ffmpeg is installed correctly."
-    )
-
-
-print(f"FFmpeg: {FFMPEG_PATH}")
-print(f"FFprobe: {FFPROBE_PATH}")
-
-
-# ============================================================
-# Configure Pydub
-# ============================================================
-
-AudioSegment.converter = FFMPEG_PATH
-AudioSegment.ffmpeg = FFMPEG_PATH
-AudioSegment.ffprobe = FFPROBE_PATH
-
-
-# ============================================================
-# YouTube Cookies
-# ============================================================
-
-def create_cookie_file():
-
+def setup_cookie_file():
     """
-    Creates a temporary cookie file from Streamlit Secrets.
+    Setup YouTube cookies.
 
-    Local:
-        D:/Video Agent/youtube_cookies.txt
+    Priority:
 
-    Streamlit Cloud:
-        st.secrets["YOUTUBE_COOKIES"]
+    1. Local youtube_cookies.txt
+    2. Streamlit Secrets -> YOUTUBE_COOKIES
+
+    The cookie file should NEVER be committed to GitHub.
     """
 
     # --------------------------------------------------------
-    # Local cookie file
+    # 1. Local development
     # --------------------------------------------------------
 
-    local_cookie_file = os.path.join(
-        PROJECT_DIR,
-        "youtube_cookies.txt"
-    )
-
-    if os.path.isfile(local_cookie_file):
+    if os.path.isfile(COOKIE_FILE):
 
         print(
-            f"Using local cookies:\n"
-            f"{local_cookie_file}"
+            "\nLocal YouTube cookie file found:"
         )
 
-        return local_cookie_file
+        print(
+            COOKIE_FILE
+        )
+
+        return COOKIE_FILE
 
 
     # --------------------------------------------------------
-    # Streamlit Cloud secrets
+    # 2. Streamlit Cloud
     # --------------------------------------------------------
 
     try:
@@ -115,43 +83,167 @@ def create_cookie_file():
             None
         )
 
-    except Exception:
+        if cookies:
 
-        cookies = None
+            with open(
+                COOKIE_FILE,
+                "w",
+                encoding="utf-8"
+            ) as file:
 
+                file.write(
+                    str(cookies)
+                )
 
-    if cookies:
+            print(
+                "\nYouTube cookies loaded "
+                "from Streamlit Secrets."
+            )
 
-        temp_cookie = tempfile.NamedTemporaryFile(
-            mode="w",
-            suffix=".txt",
-            delete=False,
-            encoding="utf-8"
-        )
+            return COOKIE_FILE
 
-        temp_cookie.write(
-            cookies
-        )
-
-        temp_cookie.close()
+    except Exception as error:
 
         print(
-            "Using YouTube cookies from "
-            "Streamlit Secrets."
+            "\nCould not load Streamlit Secrets:"
         )
 
-        return temp_cookie.name
+        print(
+            error
+        )
 
 
     # --------------------------------------------------------
-    # No cookies
+    # No cookies available
     # --------------------------------------------------------
 
     print(
-        "No YouTube cookies found."
+        "\nNo YouTube cookie file configured."
     )
 
     return None
+
+
+# ============================================================
+# FFmpeg Configuration
+# ============================================================
+
+# FFmpeg must be available in the system PATH.
+#
+# Local Windows:
+#     Install FFmpeg and add it to PATH.
+#
+# Streamlit Cloud:
+#     packages.txt must contain:
+#
+#     ffmpeg
+#
+# Do NOT use a hard-coded Windows path.
+
+
+FFMPEG_PATH = shutil.which(
+    "ffmpeg"
+)
+
+FFPROBE_PATH = shutil.which(
+    "ffprobe"
+)
+
+
+# ============================================================
+# Verify FFmpeg
+# ============================================================
+
+if FFMPEG_PATH is None:
+
+    raise FileNotFoundError(
+        "\nFFmpeg not found.\n\n"
+        "FFmpeg must be installed and available "
+        "in the system PATH.\n\n"
+        "For Streamlit Cloud, make sure packages.txt "
+        "contains:\n\n"
+        "ffmpeg\n"
+    )
+
+
+if FFPROBE_PATH is None:
+
+    raise FileNotFoundError(
+        "\nFFprobe not found.\n\n"
+        "Make sure FFmpeg is installed correctly "
+        "and ffprobe is available in PATH."
+    )
+
+
+print(
+    f"\nFFmpeg found:\n{FFMPEG_PATH}"
+)
+
+print(
+    f"\nFFprobe found:\n{FFPROBE_PATH}"
+)
+
+
+# ============================================================
+# Configure Pydub
+# ============================================================
+
+AudioSegment.converter = FFMPEG_PATH
+
+AudioSegment.ffmpeg = FFMPEG_PATH
+
+AudioSegment.ffprobe = FFPROBE_PATH
+
+
+# ============================================================
+# Verify YouTube Cookie File
+# ============================================================
+
+def verify_cookie_file():
+
+    cookie_file = setup_cookie_file()
+
+    if cookie_file is None:
+
+        print(
+            "\nWARNING:"
+        )
+
+        print(
+            "YouTube cookies are not configured."
+        )
+
+        print(
+            "Public YouTube videos may still work."
+        )
+
+        return None
+
+
+    if not os.path.isfile(
+        cookie_file
+    ):
+
+        print(
+            "\nWARNING:"
+        )
+
+        print(
+            "YouTube cookie file could not be created."
+        )
+
+        return None
+
+
+    print(
+        "\nYouTube cookies ready:"
+    )
+
+    print(
+        cookie_file
+    )
+
+    return cookie_file
 
 
 # ============================================================
@@ -162,16 +254,52 @@ def download_youtube_audio(
     url: str
 ) -> str:
 
-    print("\n" + "=" * 60)
-    print("Downloading YouTube audio...")
-    print("=" * 60)
+    print(
+        "\n" + "=" * 60
+    )
 
-    cookie_file = create_cookie_file()
+    print(
+        "Downloading YouTube audio..."
+    )
+
+    print(
+        "=" * 60
+    )
 
 
-    # ========================================================
-    # Output
-    # ========================================================
+    # --------------------------------------------------------
+    # Validate URL
+    # --------------------------------------------------------
+
+    if not url:
+
+        raise ValueError(
+            "YouTube URL cannot be empty."
+        )
+
+
+    if not url.startswith(
+        (
+            "http://",
+            "https://"
+        )
+    ):
+
+        raise ValueError(
+            "Invalid YouTube URL."
+        )
+
+
+    # --------------------------------------------------------
+    # Setup cookies
+    # --------------------------------------------------------
+
+    cookie_file = verify_cookie_file()
+
+
+    # --------------------------------------------------------
+    # Output path
+    # --------------------------------------------------------
 
     output_path = os.path.join(
         DOWNLOAD_DIR,
@@ -179,130 +307,106 @@ def download_youtube_audio(
     )
 
 
-    # ========================================================
-    # yt-dlp Options
-    # ========================================================
+    # --------------------------------------------------------
+    # yt-dlp Configuration
+    # --------------------------------------------------------
 
     ydl_opts = {
 
-        # ----------------------------------------------------
-        # Best audio
-        # ----------------------------------------------------
+        # ====================================================
+        # Best available audio
+        # ====================================================
 
         "format": "bestaudio/best",
 
 
-        # ----------------------------------------------------
+        # ====================================================
         # Output
-        # ----------------------------------------------------
+        # ====================================================
 
         "outtmpl": output_path,
 
 
-        # ----------------------------------------------------
-        # YouTube
-        #
-        # web_embedded currently avoids some PO-token
-        # requirements.
-        # ----------------------------------------------------
-
-        "extractor_args": {
-            "youtube": {
-                "player_client": [
-                    "web_embedded"
-                ]
-            }
-        },
-
-
-        # ----------------------------------------------------
-        # EJS
-        #
-        # yt-dlp uses external JS challenge solving for
-        # modern YouTube extraction.
-        # ----------------------------------------------------
-
-        "remote_components": {
-            "ejs": [
-                "github"
-            ]
-        },
-
-
-        # ----------------------------------------------------
-        # JavaScript runtime
-        #
-        # If Deno exists on the machine, yt-dlp can use it.
-        # ----------------------------------------------------
-
-        "js_runtimes": {
-            "deno": {}
-        },
-
-
-        # ----------------------------------------------------
-        # Cookies
-        # ----------------------------------------------------
+        # ====================================================
+        # Download only one video
+        # ====================================================
 
         "noplaylist": True,
 
 
-        # ----------------------------------------------------
-        # Audio conversion
-        # ----------------------------------------------------
+        # ====================================================
+        # Anti-Bot & Client Configuration (Fixes 403 Forbidden)
+        # ====================================================
+
+        "extractor_args": {
+            "youtube": {
+                "player_client": ["android", "web"]
+            }
+        },
+
+        "http_headers": {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-us,en;q=0.5",
+            "Sec-Fetch-Mode": "navigate",
+        },
+
+
+        # ====================================================
+        # Audio → WAV
+        # ====================================================
 
         "postprocessors": [
+
             {
+
                 "key": "FFmpegExtractAudio",
-                "preferredcodec": "wav"
+
+                "preferredcodec": "wav",
+
             }
+
         ],
 
 
-        # ----------------------------------------------------
-        # FFmpeg
-        #
-        # FFmpeg is already in PATH.
-        # ----------------------------------------------------
-
-        "ffmpeg_location": FFMPEG_PATH,
-
-
-        # ----------------------------------------------------
-        # Network
-        # ----------------------------------------------------
-
-        "socket_timeout": 30,
-
-        "retries": 3,
-
-        "fragment_retries": 3,
-
-
-        # ----------------------------------------------------
-        # Logging
-        # ----------------------------------------------------
+        # ====================================================
+        # Download settings
+        # ====================================================
 
         "quiet": False,
 
         "no_warnings": False,
 
+        "retries": 3,
+
+        "fragment_retries": 3,
+
         "ignoreerrors": False,
+
+
+        # ====================================================
+        # Network timeout
+        # ====================================================
+
+        "socket_timeout": 30,
+
     }
 
 
-    # ========================================================
-    # Add cookies ONLY if available
-    # ========================================================
+    # --------------------------------------------------------
+    # Add cookies only if available
+    # --------------------------------------------------------
 
     if cookie_file:
 
-        ydl_opts["cookiefile"] = cookie_file
+        ydl_opts[
+            "cookiefile"
+        ] = cookie_file
 
 
-    # ========================================================
+    # --------------------------------------------------------
     # Download
-    # ========================================================
+    # --------------------------------------------------------
 
     try:
 
@@ -310,25 +414,23 @@ def download_youtube_audio(
             "\nStarting yt-dlp..."
         )
 
-        print(
-            f"URL:\n{url}"
-        )
-
-        print(
-            f"FFmpeg:\n{FFMPEG_PATH}"
-        )
 
         if cookie_file:
 
             print(
-                "YouTube cookies: ENABLED"
+                f"\nCookie file:\n{cookie_file}"
             )
 
         else:
 
             print(
-                "YouTube cookies: DISABLED"
+                "\nNo cookie file being used."
             )
+
+
+        print(
+            f"\nFFmpeg:\n{FFMPEG_PATH}"
+        )
 
 
         with yt_dlp.YoutubeDL(
@@ -344,13 +446,13 @@ def download_youtube_audio(
             if not info:
 
                 raise RuntimeError(
-                    "yt-dlp could not extract "
+                    "Could not extract YouTube "
                     "video information."
                 )
 
 
             # ------------------------------------------------
-            # Filename
+            # Get downloaded filename
             # ------------------------------------------------
 
             filename = ydl.prepare_filename(
@@ -359,7 +461,7 @@ def download_youtube_audio(
 
 
             # ------------------------------------------------
-            # WAV filename
+            # WAV path
             # ------------------------------------------------
 
             wav_path = (
@@ -371,15 +473,15 @@ def download_youtube_audio(
 
 
             # ------------------------------------------------
-            # Verify
+            # Verify WAV
             # ------------------------------------------------
 
-            if not os.path.isfile(
+            if not os.path.exists(
                 wav_path
             ):
 
                 raise FileNotFoundError(
-                    "WAV file was not created.\n"
+                    "\nWAV file was not created.\n\n"
                     f"Expected:\n{wav_path}"
                 )
 
@@ -396,28 +498,35 @@ def download_youtube_audio(
                 "=" * 60
             )
 
+
             print(
-                f"WAV:\n{wav_path}"
+                f"\nWAV file:\n{wav_path}"
             )
 
 
             return wav_path
 
 
-    except Exception as e:
+    except Exception as error:
 
         print(
-            "\nYouTube download failed:"
+            "\n" + "=" * 60
         )
 
         print(
-            repr(e)
+            "YouTube download failed!"
         )
+
+        print(
+            "=" * 60
+        )
+
 
         raise RuntimeError(
-            "YouTube download failed.\n\n"
-            f"Original error:\n{e}"
-        ) from e
+            "\nYouTube download failed.\n\n"
+            "yt-dlp could not access this video.\n\n"
+            f"Original error:\n{error}"
+        ) from error
 
 
 # ============================================================
@@ -428,15 +537,29 @@ def convert_to_wav(
     input_path: str
 ) -> str:
 
+    print(
+        f"\nConverting audio to WAV:\n"
+        f"{input_path}"
+    )
+
+
+    # --------------------------------------------------------
+    # Verify input
+    # --------------------------------------------------------
+
     if not os.path.isfile(
         input_path
     ):
 
         raise FileNotFoundError(
-            f"Audio file not found:\n"
+            f"\nAudio file not found:\n"
             f"{input_path}"
         )
 
+
+    # --------------------------------------------------------
+    # Output
+    # --------------------------------------------------------
 
     output_path = (
         os.path.splitext(
@@ -448,9 +571,18 @@ def convert_to_wav(
 
     try:
 
+        # ----------------------------------------------------
+        # Load audio
+        # ----------------------------------------------------
+
         audio = AudioSegment.from_file(
             input_path
         )
+
+
+        # ----------------------------------------------------
+        # Export WAV
+        # ----------------------------------------------------
 
         audio.export(
             output_path,
@@ -461,16 +593,22 @@ def convert_to_wav(
     except Exception as error:
 
         raise RuntimeError(
-            f"Audio conversion failed:\n"
+            f"\nAudio conversion failed:\n"
             f"{error}"
         ) from error
+
+
+    print(
+        f"\nConversion successful:\n"
+        f"{output_path}"
+    )
 
 
     return output_path
 
 
 # ============================================================
-# Split Audio
+# Split Audio Into Chunks
 # ============================================================
 
 def chunk_audio(
@@ -478,15 +616,37 @@ def chunk_audio(
     chunk_minutes: int = 10
 ) -> list:
 
+    print(
+        "\n" + "=" * 60
+    )
+
+    print(
+        f"Chunking audio into "
+        f"{chunk_minutes}-minute pieces..."
+    )
+
+    print(
+        "=" * 60
+    )
+
+
+    # --------------------------------------------------------
+    # Verify WAV
+    # --------------------------------------------------------
+
     if not os.path.isfile(
         wav_path
     ):
 
         raise FileNotFoundError(
-            f"WAV file not found:\n"
+            f"\nWAV file not found:\n"
             f"{wav_path}"
         )
 
+
+    # --------------------------------------------------------
+    # Validate duration
+    # --------------------------------------------------------
 
     if chunk_minutes <= 0:
 
@@ -494,6 +654,10 @@ def chunk_audio(
             "chunk_minutes must be greater than 0."
         )
 
+
+    # --------------------------------------------------------
+    # Load WAV
+    # --------------------------------------------------------
 
     try:
 
@@ -504,10 +668,14 @@ def chunk_audio(
     except Exception as error:
 
         raise RuntimeError(
-            f"Could not open WAV file:\n"
+            f"\nCould not open WAV file:\n"
             f"{error}"
         ) from error
 
+
+    # --------------------------------------------------------
+    # Chunk duration
+    # --------------------------------------------------------
 
     chunk_ms = (
         chunk_minutes
@@ -519,10 +687,18 @@ def chunk_audio(
     chunks = []
 
 
+    # --------------------------------------------------------
+    # Base path
+    # --------------------------------------------------------
+
     base_path = os.path.splitext(
         wav_path
     )[0]
 
+
+    # --------------------------------------------------------
+    # Create chunks
+    # --------------------------------------------------------
 
     for i, start in enumerate(
         range(
@@ -533,6 +709,7 @@ def chunk_audio(
     ):
 
         end = start + chunk_ms
+
 
         chunk = audio[
             start:end
@@ -557,13 +734,19 @@ def chunk_audio(
 
 
         print(
-            f"Created chunk {i + 1}: "
+            f"Created chunk "
+            f"{i + 1}: "
             f"{chunk_path}"
         )
 
 
+    # --------------------------------------------------------
+    # Summary
+    # --------------------------------------------------------
+
     print(
-        f"Total chunks: {len(chunks)}"
+        f"\nTotal chunks created: "
+        f"{len(chunks)}"
     )
 
 
@@ -580,7 +763,18 @@ def process_input(
 ) -> list:
 
     # ========================================================
-    # YouTube
+    # Validate source
+    # ========================================================
+
+    if not source:
+
+        raise ValueError(
+            "Input source cannot be empty."
+        )
+
+
+    # ========================================================
+    # YouTube URL
     # ========================================================
 
     if source.startswith(
@@ -591,12 +785,14 @@ def process_input(
     ):
 
         print(
-            "Detected YouTube URL."
+            "\nDetected YouTube URL."
         )
 
 
-        wav_path = download_youtube_audio(
-            source
+        wav_path = (
+            download_youtube_audio(
+                source
+            )
         )
 
 
@@ -607,22 +803,30 @@ def process_input(
     else:
 
         print(
-            "Using local audio file."
+            "\nUsing local audio file."
         )
 
 
         wav_path = source
 
 
+        # ----------------------------------------------------
+        # Verify local file
+        # ----------------------------------------------------
+
         if not os.path.isfile(
             wav_path
         ):
 
             raise FileNotFoundError(
-                f"Audio file not found:\n"
+                f"\nAudio file not found:\n"
                 f"{wav_path}"
             )
 
+
+        # ----------------------------------------------------
+        # Convert non-WAV
+        # ----------------------------------------------------
 
         if not wav_path.lower().endswith(
             ".wav"
@@ -634,17 +838,38 @@ def process_input(
 
 
     # ========================================================
-    # Chunk
+    # Display audio
+    # ========================================================
+
+    print(
+        "\nAudio file:"
+    )
+
+    print(
+        wav_path
+    )
+
+
+    # ========================================================
+    # Split audio
     # ========================================================
 
     chunks = chunk_audio(
         wav_path,
-        chunk_minutes
+        chunk_minutes=chunk_minutes
     )
 
 
+    # ========================================================
+    # Completed
+    # ========================================================
+
     print(
-        "Audio processing completed."
+        "\nAudio processing completed."
+    )
+
+    print(
+        f"Total chunks: {len(chunks)}"
     )
 
 
