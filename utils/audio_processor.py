@@ -3,15 +3,15 @@ from yt_dlp import YoutubeDL
 
 def process_input(source: str) -> list:
     """
-    Downloads audio from a YouTube URL or local file path using a robust 
-    format fallback mechanism and automatic JS challenge solver.
+    Downloads audio from a YouTube URL or local file path using 
+    fully updated player clients and remote JavaScript challenge solvers.
     """
     output_dir = "temp_audio"
     os.makedirs(output_dir, exist_ok=True)
     
     if "youtube.com" in source or "youtu.be" in source:
         ydl_opts = {
-            # Use a resilient fallback chain that handles pre-muxed streams
+            # Use 'best' as a safety net fallback to avoid missing format errors
             'format': 'best/bestvideo+bestaudio/bestaudio',
             'postprocessors': [{
                 'key': 'FFmpegExtractAudio',
@@ -21,13 +21,13 @@ def process_input(source: str) -> list:
             'outtmpl': os.path.join(output_dir, '%(id)s.%(ext)s'),
             'extractor_args': {
                 'youtube': {
-                    'player_client': ['web_safari', 'web_embedded', '-tv_downgraded']
+                    'player_client': ['mweb', 'web']
                 }
             },
-            # Automatically handle YouTube's signature challenges using remote components
+            # Pulls external components to solve YouTube JS challenges automatically
             'remote_components': {'ejs': 'github'},
             'quiet': True,
-            'no_warnings': True,
+            'no_warnings': False,  # Keep warnings visible to trace any issues in logs
             'ignoreerrors': False,
         }
         
