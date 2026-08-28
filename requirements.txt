@@ -11,6 +11,8 @@ openai-whisper>=20231117
 torch>=2.2.0
 torchaudio>=2.2.0
 
+pydub
+
 # ===== Translation (Hindi -> English) =====
 transformers>=4.42.0
 sentencepiece>=0.2.0
