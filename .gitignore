@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# Virtual environment
+.venv/
+venv/
+
+# Environment variables
+.env
+.env.*
+
+# YouTube cookies
+youtube_cookies.txt
+cookies.txt
+*.cookies.txt
+
+# Downloads
+downloads/
+*.wav
+*.mp3
+*.m4a
+*.webm
+*.mp4
+
+# Vector database
+vector_db/
+chroma_db/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

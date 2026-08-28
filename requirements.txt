@@ -1,0 +1,41 @@
+# ===== Core UI =====
+streamlit>=1.36.0
+
+# ===== Audio Handling / YouTube =====
+yt-dlp>=2024.8.6
+pytube>=15.0.0
+ffmpeg-python>=0.2.0
+
+# ===== Transcription (Local Whisper) =====
+openai-whisper>=20231117
+torch>=2.2.0
+torchaudio>=2.2.0
+
+# ===== Translation (Hindi -> English) =====
+transformers>=4.42.0
+sentencepiece>=0.2.0
+sacremoses>=0.1.1
+
+# ===== LangChain (LCEL) + Mistral =====
+langchain>=0.2.11
+langchain-core>=0.2.24
+langchain-community>=0.2.10
+langchain-mistralai>=0.1.12
+mistralai>=0.4.2
+
+# ===== RAG Pipeline =====
+chromadb>=0.5.5
+langchain-chroma>=0.1.2
+langchain-huggingface>=0.0.3
+sentence-transformers>=3.0.1
+
+# ===== PDF / TXT Export =====
+fpdf2>=2.7.9
+reportlab>=4.2.2
+
+# ===== Utilities =====
+python-dotenv>=1.0.1
+pydantic>=2.8.2
+numpy>=1.26.4
+tqdm>=4.66.4
+requests>=2.32.3
