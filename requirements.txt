@@ -2,7 +2,8 @@
 streamlit>=1.36.0
 
 # ===== Audio Handling / YouTube =====
-yt-dlp>=2024.8.6
+yt-dlp[default]
+yt-dlp-ejs
 pytube>=15.0.0
 ffmpeg-python>=0.2.0
 
