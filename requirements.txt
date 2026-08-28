@@ -2,9 +2,8 @@
 streamlit>=1.36.0
 
 # ===== Audio Handling / YouTube =====
-yt-dlp[default]
+yt-dlp>=2026.3.0
 yt-dlp-ejs
-pytube>=15.0.0
 ffmpeg-python>=0.2.0
 tiktoken
 faiss-cpu
