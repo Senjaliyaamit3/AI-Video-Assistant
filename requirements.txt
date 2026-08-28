@@ -6,6 +6,8 @@ yt-dlp[default]
 yt-dlp-ejs
 pytube>=15.0.0
 ffmpeg-python>=0.2.0
+tiktoken
+faiss-cpu
 
 # ===== Transcription (Local Whisper) =====
 openai-whisper>=20231117
