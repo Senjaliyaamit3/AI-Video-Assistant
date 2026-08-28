@@ -340,7 +340,7 @@ with st.sidebar:
 
     language = st.selectbox(
         "Language",
-        ["English", "Hindi"],
+        ["english", "hindi", "hinglish"],
         index=0
     )
 
