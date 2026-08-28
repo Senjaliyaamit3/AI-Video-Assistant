@@ -3,23 +3,22 @@ from yt_dlp import YoutubeDL
 
 def process_input(source: str) -> list:
     """
-    Downloads audio from a YouTube URL or local file path, 
-    splits it into chunks, and returns the list of chunk file paths.
+    Downloads audio from a YouTube URL or local file path using a robust 
+    format fallback mechanism to prevent 'Requested format is not available' errors.
     """
     output_dir = "temp_audio"
     os.makedirs(output_dir, exist_ok=True)
     
-    # Check if input is a YouTube URL
     if "youtube.com" in source or "youtu.be" in source:
         ydl_opts = {
-            'format': 'bestaudio/best',
+            # Use a flexible fallback format selector instead of strict constraints
+            'format': 'best/bestvideo+bestaudio/bestaudio',
             'postprocessors': [{
                 'key': 'FFmpegExtractAudio',
                 'preferredcodec': 'mp3',
                 'preferredquality': '192',
             }],
             'outtmpl': os.path.join(output_dir, '%(id)s.%(ext)s'),
-            # FIX: Add extractor args to bypass "The page needs to be reloaded" error
             'extractor_args': {
                 'youtube': {
                     'player_client': ['web_safari', 'web_embedded', '-tv_downgraded']
@@ -27,16 +26,17 @@ def process_input(source: str) -> list:
             },
             'quiet': True,
             'no_warnings': True,
+            'ignoreerrors': False,
         }
         
         with YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(source, download=True)
+            # Handle cases where info might be a playlist or single video dictionary
+            if 'entries' in info:
+                info = info['entries'][0]
             audio_path = os.path.join(output_dir, f"{info['id']}.mp3")
+            
+        return [audio_path]
     else:
-        # Handle local file paths
-        audio_path = source
-
-    # Split audio file into chunks for transcription if necessary
-    # (Make sure your chunking implementation returns the list of chunk file paths)
-    chunks = [audio_path] # Replace with your actual chunk splitting logic if applicable
-    return chunks
+        # Fallback for local files
+        return [source]
