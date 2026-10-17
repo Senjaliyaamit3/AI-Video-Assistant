@@ -1,669 +1,165 @@
 import os
 import shutil
+
 import yt_dlp
 from pydub import AudioSegment
 
-
-# ============================================================
-# Project Configuration
-# ============================================================
-
-PROJECT_DIR = os.path.dirname(
-    os.path.dirname(
-        os.path.abspath(__file__)
-    )
-)
+from utils.ffmpeg_setup import ensure_ffmpeg
 
 
-# ============================================================
-# Download Directory
-# ============================================================
+PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DOWNLOAD_DIR = os.path.join(PROJECT_DIR, "downloads")
+COOKIE_FILE = os.path.join(PROJECT_DIR, "youtube_cookies.txt")
 
-DOWNLOAD_DIR = os.path.join(
-    PROJECT_DIR,
-    "downloads"
-)
-
-os.makedirs(
-    DOWNLOAD_DIR,
-    exist_ok=True
-)
+os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
 
-# ============================================================
-# YouTube Cookies
-# ============================================================
+def _setup_ffmpeg() -> str:
+    ffmpeg, ffprobe = ensure_ffmpeg()
 
-COOKIE_FILE = os.path.join(
-    PROJECT_DIR,
-    "youtube_cookies.txt"
-)
+    AudioSegment.converter = ffmpeg
+    AudioSegment.ffmpeg = ffmpeg
+    AudioSegment.ffprobe = ffprobe
 
-
-# ============================================================
-# FFmpeg Configuration
-# ============================================================
-
-# FFmpeg must be available in the system PATH.
-#
-# Windows:
-#   Your locally installed FFmpeg should be in PATH.
-#
-# Streamlit Cloud:
-#   FFmpeg is installed using packages.txt:
-#
-#       ffmpeg
-#
-# Do NOT use a hard-coded Windows path.
-
-FFMPEG_PATH = shutil.which("ffmpeg")
-FFPROBE_PATH = shutil.which("ffprobe")
+    return ffmpeg
 
 
-# ============================================================
-# Verify FFmpeg
-# ============================================================
-
-if FFMPEG_PATH is None:
-
-    raise FileNotFoundError(
-        "\nFFmpeg not found.\n\n"
-        "Make sure FFmpeg is installed and available "
-        "in the system PATH.\n\n"
-        "For Streamlit Cloud, create packages.txt "
-        "with:\n\n"
-        "ffmpeg\n"
-    )
-
-
-if FFPROBE_PATH is None:
-
-    raise FileNotFoundError(
-        "\nFFprobe not found.\n\n"
-        "Make sure FFmpeg is installed correctly "
-        "and ffprobe is available in PATH.\n"
-    )
-
-
-print(
-    f"\nFFmpeg found:\n{FFMPEG_PATH}"
-)
-
-print(
-    f"\nFFprobe found:\n{FFPROBE_PATH}"
-)
-
-
-# ============================================================
-# Configure Pydub
-# ============================================================
-
-AudioSegment.converter = FFMPEG_PATH
-AudioSegment.ffmpeg = FFMPEG_PATH
-AudioSegment.ffprobe = FFPROBE_PATH
-
-
-# ============================================================
-# Verify YouTube Cookie File
-# ============================================================
-
-def verify_cookie_file():
-    """
-    Verify that the exported YouTube cookie file exists.
-
-    IMPORTANT:
-    Do NOT upload youtube_cookies.txt to GitHub.
-    """
-
-    if not os.path.isfile(COOKIE_FILE):
-
-        raise FileNotFoundError(
-            "\nYouTube cookie file not found.\n\n"
-            f"Expected location:\n{COOKIE_FILE}\n\n"
-            "Please export your YouTube cookies and "
-            "save them as youtube_cookies.txt."
-        )
-
-    print(
-        f"\nYouTube cookies found:\n"
-        f"{COOKIE_FILE}"
-    )
-
-
-# ============================================================
-# YouTube → WAV
-# ============================================================
-
-def download_youtube_audio(
-    url: str
-) -> str:
+def download_youtube_audio(url: str) -> str:
 
     print("\n" + "=" * 60)
     print("Downloading YouTube audio...")
     print("=" * 60)
 
-    # --------------------------------------------------------
-    # Verify cookie file
-    # --------------------------------------------------------
-
-    verify_cookie_file()
-
-    # --------------------------------------------------------
-    # Output path
-    # --------------------------------------------------------
-
-    output_path = os.path.join(
-        DOWNLOAD_DIR,
-        "%(title)s.%(ext)s"
-    )
-
-    # --------------------------------------------------------
-    # yt-dlp Configuration
-    # --------------------------------------------------------
+    ffmpeg = _setup_ffmpeg()
 
     ydl_opts = {
-
-        # ====================================================
-        # Best available audio
-        # ====================================================
-
         "format": "bestaudio/best",
-
-        # ====================================================
-        # YouTube cookies
-        # ====================================================
-
-        "cookiefile": COOKIE_FILE,
-
-        # ====================================================
-        # JavaScript Runtime
-        # ====================================================
-
-        "js_runtimes": {
-            "deno": {}
-        },
-
-        # ====================================================
-        # Remote EJS components
-        #
-        # Required by newer yt-dlp versions for
-        # YouTube JavaScript challenge solving.
-        # ====================================================
-
-        "remote_components": {
-            "ejs": ["github"]
-        },
-
-        # ====================================================
-        # YouTube extractor configuration
-        # ====================================================
-
-        "extractor_args": {
-            "youtube": {
-                "player_client": [
-                    "default",
-                    "web_embedded"
-                ]
-            }
-        },
-
-        # ====================================================
-        # Output
-        # ====================================================
-
-        "outtmpl": output_path,
-
-        # ====================================================
-        # IMPORTANT:
-        # Do NOT use:
-        #
-        # "ffmpeg_location": FFMPEG_DIR
-        #
-        # FFmpeg is already available through PATH.
-        # ====================================================
-
-        # ====================================================
-        # Download only one video
-        # ====================================================
-
+        "outtmpl": os.path.join(DOWNLOAD_DIR, "%(id)s.%(ext)s"),
         "noplaylist": True,
-
-        # ====================================================
-        # Audio → WAV
-        # ====================================================
-
+        "ffmpeg_location": os.path.dirname(ffmpeg),
         "postprocessors": [
             {
                 "key": "FFmpegExtractAudio",
                 "preferredcodec": "wav",
             }
         ],
-
-        # ====================================================
-        # Download settings
-        # ====================================================
-
+        "postprocessor_args": ["-ar", "16000", "-ac", "1"],
+        "extractor_args": {
+            "youtube": {"player_client": ["default", "web_embedded"]}
+        },
         "quiet": False,
-
         "no_warnings": False,
-
         "retries": 3,
-
         "fragment_retries": 3,
-
         "ignoreerrors": False,
-
-        # ====================================================
-        # Network timeout
-        # ====================================================
-
         "socket_timeout": 30,
     }
 
-    # --------------------------------------------------------
-    # Download
-    # --------------------------------------------------------
+    if os.path.isfile(COOKIE_FILE):
+        ydl_opts["cookiefile"] = COOKIE_FILE
+        print(f"Using cookies: {COOKIE_FILE}")
+    else:
+        print("No youtube_cookies.txt found - continuing without cookies.")
+
+    runtimes = {name: {} for name in ("deno", "node") if shutil.which(name)}
+    if runtimes:
+        ydl_opts["js_runtimes"] = runtimes
 
     try:
-
-        print(
-            "\nStarting yt-dlp..."
-        )
-
-        print(
-            f"Cookie file:\n{COOKIE_FILE}"
-        )
-
-        print(
-            f"FFmpeg:\n{FFMPEG_PATH}"
-        )
-
-        with yt_dlp.YoutubeDL(
-            ydl_opts
-        ) as ydl:
-
-            info = ydl.extract_info(
-                url,
-                download=True
-            )
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=True)
 
             if not info:
+                raise RuntimeError("Could not extract YouTube video information.")
 
-                raise RuntimeError(
-                    "Could not extract YouTube "
-                    "video information."
-                )
+            if "entries" in info and info["entries"]:
+                info = info["entries"][0]
 
-            # ------------------------------------------------
-            # Get downloaded filename
-            # ------------------------------------------------
+            wav_path = os.path.join(DOWNLOAD_DIR, f"{info['id']}.wav")
 
-            filename = ydl.prepare_filename(
-                info
-            )
+            if not os.path.exists(wav_path):
+                raise FileNotFoundError(f"WAV file was not created: {wav_path}")
 
-            # ------------------------------------------------
-            # Convert original extension to WAV
-            # ------------------------------------------------
-
-            wav_path = (
-                os.path.splitext(filename)[0]
-                + ".wav"
-            )
-
-            # ------------------------------------------------
-            # Verify WAV
-            # ------------------------------------------------
-
-            if not os.path.exists(
-                wav_path
-            ):
-
-                raise FileNotFoundError(
-                    "\nWAV file was not created.\n\n"
-                    f"Expected:\n{wav_path}"
-                )
-
-            print(
-                "\n" + "=" * 60
-            )
-
-            print(
-                "YouTube download successful!"
-            )
-
-            print(
-                "=" * 60
-            )
-
-            print(
-                f"\nWAV file:\n{wav_path}"
-            )
-
+            print(f"\nWAV file: {wav_path}")
             return wav_path
 
     except Exception as e:
-
-        print(
-            "\n" + "=" * 60
-        )
-
-        print(
-            "YouTube download failed!"
-        )
-
-        print(
-            "=" * 60
-        )
-
-        raise RuntimeError(
-            "\nYouTube download failed.\n\n"
-            "yt-dlp could not access this video.\n\n"
-            f"Original error:\n{e}"
-        ) from e
+        raise RuntimeError(f"YouTube download failed: {e}") from e
 
 
-# ============================================================
-# Convert Audio → WAV
-# ============================================================
+def convert_to_wav(input_path: str) -> str:
 
-def convert_to_wav(
-    input_path: str
-) -> str:
+    _setup_ffmpeg()
 
-    print(
-        f"\nConverting audio to WAV:\n"
-        f"{input_path}"
-    )
+    if not os.path.isfile(input_path):
+        raise FileNotFoundError(f"Audio file not found: {input_path}")
 
-    # --------------------------------------------------------
-    # Verify input file
-    # --------------------------------------------------------
-
-    if not os.path.isfile(
-        input_path
-    ):
-
-        raise FileNotFoundError(
-            f"\nAudio file not found:\n"
-            f"{input_path}"
-        )
-
-    # --------------------------------------------------------
-    # Output path
-    # --------------------------------------------------------
-
-    output_path = (
-        os.path.splitext(
-            input_path
-        )[0]
-        + "_converted.wav"
-    )
+    output_path = os.path.splitext(input_path)[0] + "_converted.wav"
 
     try:
-
-        # ----------------------------------------------------
-        # Load audio
-        # ----------------------------------------------------
-
-        audio = AudioSegment.from_file(
-            input_path
-        )
-
-        # ----------------------------------------------------
-        # Export WAV
-        # ----------------------------------------------------
-
-        audio.export(
-            output_path,
-            format="wav"
-        )
-
+        audio = AudioSegment.from_file(input_path)
+        audio = audio.set_frame_rate(16000).set_channels(1)
+        audio.export(output_path, format="wav")
     except Exception as error:
+        raise RuntimeError(f"Audio conversion failed: {error}") from error
 
-        raise RuntimeError(
-            f"\nAudio conversion failed:\n"
-            f"{error}"
-        ) from error
-
-    print(
-        f"\nConversion successful:\n"
-        f"{output_path}"
-    )
-
+    print(f"Conversion successful: {output_path}")
     return output_path
 
 
-# ============================================================
-# Split Audio Into Chunks
-# ============================================================
+def chunk_audio(wav_path: str, chunk_minutes: int = 10) -> list:
 
-def chunk_audio(
-    wav_path: str,
-    chunk_minutes: int = 10
-) -> list:
+    _setup_ffmpeg()
 
-    print(
-        "\n" + "=" * 60
-    )
-
-    print(
-        f"Chunking audio into "
-        f"{chunk_minutes}-minute pieces..."
-    )
-
-    print(
-        "=" * 60
-    )
-
-    # --------------------------------------------------------
-    # Verify WAV
-    # --------------------------------------------------------
-
-    if not os.path.isfile(
-        wav_path
-    ):
-
-        raise FileNotFoundError(
-            f"\nWAV file not found:\n"
-            f"{wav_path}"
-        )
-
-    # --------------------------------------------------------
-    # Validate chunk duration
-    # --------------------------------------------------------
+    if not os.path.isfile(wav_path):
+        raise FileNotFoundError(f"WAV file not found: {wav_path}")
 
     if chunk_minutes <= 0:
-
-        raise ValueError(
-            "chunk_minutes must be greater than 0."
-        )
-
-    # --------------------------------------------------------
-    # Load WAV
-    # --------------------------------------------------------
+        raise ValueError("chunk_minutes must be greater than 0.")
 
     try:
-
-        audio = AudioSegment.from_wav(
-            wav_path
-        )
-
+        audio = AudioSegment.from_file(wav_path)
     except Exception as error:
+        raise RuntimeError(f"Could not open audio file: {error}") from error
 
-        raise RuntimeError(
-            f"\nCould not open WAV file:\n"
-            f"{error}"
-        ) from error
+    if len(audio) == 0:
+        raise ValueError("The audio file is empty.")
 
-    # --------------------------------------------------------
-    # Chunk duration in milliseconds
-    # --------------------------------------------------------
-
-    chunk_ms = (
-        chunk_minutes
-        * 60
-        * 1000
-    )
-
+    chunk_ms = chunk_minutes * 60 * 1000
+    base_path = os.path.splitext(wav_path)[0]
     chunks = []
 
-    # --------------------------------------------------------
-    # Base path
-    # --------------------------------------------------------
+    for i, start in enumerate(range(0, len(audio), chunk_ms)):
+        chunk = audio[start:start + chunk_ms]
+        chunk_path = f"{base_path}_chunk_{i + 1}.wav"
+        chunk.export(chunk_path, format="wav")
+        chunks.append(chunk_path)
+        print(f"Created chunk {i + 1}: {chunk_path}")
 
-    base_path = os.path.splitext(
-        wav_path
-    )[0]
-
-    # --------------------------------------------------------
-    # Create chunks
-    # --------------------------------------------------------
-
-    for i, start in enumerate(
-        range(
-            0,
-            len(audio),
-            chunk_ms
-        )
-    ):
-
-        end = start + chunk_ms
-
-        chunk = audio[
-            start:end
-        ]
-
-        chunk_path = (
-            f"{base_path}"
-            f"_chunk_{i + 1}.wav"
-        )
-
-        chunk.export(
-            chunk_path,
-            format="wav"
-        )
-
-        chunks.append(
-            chunk_path
-        )
-
-        print(
-            f"Created chunk "
-            f"{i + 1}: "
-            f"{chunk_path}"
-        )
-
-    # --------------------------------------------------------
-    # Summary
-    # --------------------------------------------------------
-
-    print(
-        f"\nTotal chunks created: "
-        f"{len(chunks)}"
-    )
-
+    print(f"Total chunks created: {len(chunks)}")
     return chunks
 
 
-# ============================================================
-# Main Input Processor
-# ============================================================
+def process_input(source: str, chunk_minutes: int = 10) -> list:
 
-def process_input(
-    source: str,
-    chunk_minutes: int = 10
-) -> list:
+    source = source.strip().strip('"')
 
-    # ========================================================
-    # YouTube URL
-    # ========================================================
-
-    if source.startswith(
-        (
-            "http://",
-            "https://"
-        )
-    ):
-
-        print(
-            "\nDetected YouTube URL."
-        )
-
-        wav_path = (
-            download_youtube_audio(
-                source
-            )
-        )
-
-    # ========================================================
-    # Local Audio
-    # ========================================================
+    if source.startswith(("http://", "https://")):
+        print("Detected URL.")
+        wav_path = download_youtube_audio(source)
 
     else:
+        print("Using local file.")
 
-        print(
-            "\nUsing local audio file."
-        )
+        if not os.path.isfile(source):
+            raise FileNotFoundError(f"File not found: {source}")
 
         wav_path = source
 
-        # ----------------------------------------------------
-        # Verify local file
-        # ----------------------------------------------------
+        if not wav_path.lower().endswith(".wav"):
+            wav_path = convert_to_wav(wav_path)
 
-        if not os.path.isfile(
-            wav_path
-        ):
+    chunks = chunk_audio(wav_path, chunk_minutes=chunk_minutes)
 
-            raise FileNotFoundError(
-                f"\nAudio file not found:\n"
-                f"{wav_path}"
-            )
-
-        # ----------------------------------------------------
-        # Convert non-WAV audio
-        # ----------------------------------------------------
-
-        if not wav_path.lower().endswith(
-            ".wav"
-        ):
-
-            wav_path = convert_to_wav(
-                wav_path
-            )
-
-    # ========================================================
-    # Display audio path
-    # ========================================================
-
-    print(
-        "\nAudio file:"
-    )
-
-    print(
-        wav_path
-    )
-
-    # ========================================================
-    # Split Audio
-    # ========================================================
-
-    chunks = chunk_audio(
-        wav_path,
-        chunk_minutes=chunk_minutes
-    )
-
-    # ========================================================
-    # Completed
-    # ========================================================
-
-    print(
-        "\nAudio processing completed."
-    )
-
-    print(
-        f"Total chunks: {len(chunks)}"
-    )
-
+    print(f"Audio processing completed. Total chunks: {len(chunks)}")
     return chunks

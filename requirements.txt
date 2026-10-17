@@ -1,29 +1,34 @@
 # ===== Core UI =====
 streamlit>=1.36.0
+markdown>=3.5
 
 # ===== Audio Handling / YouTube =====
 yt-dlp>=2024.8.6
 pytube>=15.0.0
 ffmpeg-python>=0.2.0
+pydub>=0.25.1
 
 # ===== Transcription (Local Whisper) =====
 openai-whisper>=20231117
 torch>=2.2.0
 torchaudio>=2.2.0
 
-pydub
-
 # ===== Translation (Hindi -> English) =====
 transformers>=4.42.0
 sentencepiece>=0.2.0
 sacremoses>=0.1.1
 
-# ===== LangChain (LCEL) + Mistral =====
+# ===== LangChain (LCEL) + Groq =====
 langchain>=0.2.11
 langchain-core>=0.2.24
 langchain-community>=0.2.10
-langchain-mistralai>=0.1.12
-mistralai>=0.4.2
+langchain-text-splitters>=0.2.2
+langchain-groq>=0.1.9
+groq>=0.9.0
+
+# ===== Optional: Mistral (uncomment only if app.py still uses it) =====
+# langchain-mistralai>=0.1.12
+# mistralai>=0.4.2
 
 # ===== RAG Pipeline =====
 chromadb>=0.5.5

@@ -1,45 +1,59 @@
-# Actionableitems, decision, questions
-
-from langchain_mistralai import ChatMistralAI
-from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
-from langchain_core.runnables import RunnableLambda, RunnablePassthrough
-import os
+from langchain_core.prompts import ChatPromptTemplate
 
-def get_llm():
-    return ChatMistralAI(model="mistral-small-latest", mistral_api_key=os.getenv("MISTRAL_API_KEY"),temperature=0.3)
+from core.llm import get_llm, split_text
 
-def build_chain(system_prompt : str):
-    llm = get_llm()
-    return (RunnablePassthrough() | RunnableLambda(lambda x : {"text" : x}) | 
-            ChatPromptTemplate.from_messages([
-            ("system",system_prompt),
-            ("human","{text}"),
-        ]))
+_parser = StrOutputParser()
 
-def extract_action_items(transcript : str) -> str:
-    chain = build_chain(
-        "You are an expert meeting analyst. From The meeting transcript, "
-        "extract all action items. For each provide:\n"
-        "- Task description\n"
-        "- Owner (who is responsible)\n"
-        "- Deadline (if mentioned, else write 'Note specified')\n\n"
-        "Format as a numbered list. If none found say 'No action items found.'"
+NONE_TEXT = "None found."
+
+
+def _run(system: str, human: str, **vars) -> str:
+    prompt = ChatPromptTemplate.from_messages([("system", system), ("human", human)])
+    return (prompt | get_llm() | _parser).invoke(vars).strip()
+
+
+def _extract(what: str, instructions: str, transcript: str) -> str:
+    """Extract `what` from each chunk, then merge and de-duplicate if there were several."""
+    system = (
+        f"You extract {what} from a transcript. {instructions} "
+        f"Reply as a markdown bullet list using '- '. If there are none, reply exactly: {NONE_TEXT}"
     )
-    return chain.invoke(transcript)
+    chunks = split_text(transcript, chunk_size=10000, overlap=400)
+    results = [_run(system, "Transcript:\n{text}", text=c) for c in chunks]
+    results = [r for r in results if r and NONE_TEXT not in r]
 
-def extract_key_decisions(transcript : str) -> str:
-    chain = build_chain(
-        "You are an expert meeting analyst. From the meeting transcript, "
-        "extract all key decisions made. Format as a numbered list."
-        "If none found say 'No key decisions found.'"
-    )
-    return chain.invoke(transcript)
+    if not results:
+        return NONE_TEXT
+    if len(results) == 1:
+        return results[0]
 
-def extract_questions(transcripts: str)-> str:
-    chain = build_chain(
-        "From the meeting transcript, extract all unresolved question "
-        "or topic needing follow-up. Format as a numbered list."
-        "If none found say 'No open questions found.'"
+    return _run(
+        f"Merge these lists of {what} into one bullet list. Remove duplicates, keep it concise.",
+        "Lists:\n{text}",
+        text="\n\n".join(results),
     )
-    return chain.invoke(transcripts)
+
+
+def extract_action_items(transcript: str) -> str:
+    return _extract(
+        "action items",
+        "Include who is responsible and any deadline if mentioned.",
+        transcript,
+    )
+
+
+def extract_key_decisions(transcript: str) -> str:
+    return _extract(
+        "key decisions or conclusions",
+        "Only include things that were actually decided or concluded.",
+        transcript,
+    )
+
+
+def extract_questions(transcript: str) -> str:
+    return _extract(
+        "open questions",
+        "Include questions raised but left unanswered or unresolved.",
+        transcript,
+    )
