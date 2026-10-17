@@ -3,22 +3,27 @@ streamlit>=1.36.0
 markdown>=3.5
 
 # ===== Audio Handling / YouTube =====
-yt-dlp>=2024.8.6
-pytube>=15.0.0
+yt-dlp
 ffmpeg-python>=0.2.0
 pydub>=0.25.1
 
-# ===== Transcription (Local Whisper) =====
+# ===== Transcription =====
 openai-whisper>=20231117
 torch>=2.2.0
 torchaudio>=2.2.0
 
 # ===== Translation (Hindi -> English) =====
+# ===== Token / Vector Search =====
+tiktoken
+faiss-cpu
+
+# ===== Translation =====
 transformers>=4.42.0
 sentencepiece>=0.2.0
 sacremoses>=0.1.1
 
 # ===== LangChain (LCEL) + Groq =====
+# ===== LangChain + Mistral =====
 langchain>=0.2.11
 langchain-core>=0.2.24
 langchain-community>=0.2.10
@@ -36,7 +41,7 @@ langchain-chroma>=0.1.2
 langchain-huggingface>=0.0.3
 sentence-transformers>=3.0.1
 
-# ===== PDF / TXT Export =====
+# ===== PDF Export =====
 fpdf2>=2.7.9
 reportlab>=4.2.2
 
