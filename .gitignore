@@ -1,39 +1,131 @@
+
+# ==============================
 # Python
+# ==============================
 __pycache__/
 *.py[cod]
+*$py.class
+*.pyd
+*.so
 
-# Virtual environment
+# ==============================
+# Virtual Environments
+# ==============================
 .venv/
 venv/
+env/
+ENV/
 
-# Environment variables
+# ==============================
+# Environment Variables / Secrets
+# ==============================
 .env
 .env.*
+!.env.example
+!.env.sample
 
-# YouTube cookies
+# Private keys and credentials
+*.pem
+*.key
+secrets.json
+credentials.json
+service-account*.json
+
+# ==============================
+# YouTube Cookies
+# ==============================
 youtube_cookies.txt
 cookies.txt
 *.cookies.txt
+cookies*.txt
 
-# Downloads
+# ==============================
+# Downloads / Media Files
+# ==============================
 downloads/
 *.wav
 *.mp3
 *.m4a
+*.aac
+*.ogg
+*.flac
 *.webm
 *.mp4
+*.mkv
+*.avi
+*.mov
 
-# Vector database
+# ==============================
+# Vector Databases / Embeddings
+# ==============================
 vector_db/
 chroma_db/
+chroma.sqlite3
+*.faiss
+*.index
 
-# IDE
+# ==============================
+# IDE / Editors
+# ==============================
 .vscode/
 .idea/
+*.sublime-workspace
+*.sublime-project
 
-# OS
+# ==============================
+# Operating System
+# ==============================
 .DS_Store
 Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
 
+# ==============================
 # Logs
+# ==============================
 *.log
+logs/
+
+# ==============================
+# Testing / Coverage
+# ==============================
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+
+# ==============================
+# Type Checking / Linting
+# ==============================
+.mypy_cache/
+.pyright/
+.ruff_cache/
+
+# ==============================
+# Jupyter Notebook
+# ==============================
+.ipynb_checkpoints/
+
+# ==============================
+# Build / Distribution
+# ==============================
+build/
+dist/
+*.egg-info/
+
+# ==============================
+# Temporary Files
+# ==============================
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+~$*
+
+# ==============================
+# Streamlit Secrets
+# ==============================
+.streamlit/secrets.toml
